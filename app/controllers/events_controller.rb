@@ -67,13 +67,20 @@ class EventsController < ApplicationController
   end
 
   def register_user
+    error =nil
     @event = Event.find(params[:id])
     email = params[:email]
     user = User.where(email: email).take
     unless user.nil?
       @event.users << user
+    else
+      error = "No pudo agregarse el correo #{email}"
+      #puts "#{error}"
     end
-    redirect_to register_to_event_path(@event)
+
+    respond_to do |format|
+        format.html {redirect_to register_to_event_path(@event), notice: error}
+    end
   end
 
   private

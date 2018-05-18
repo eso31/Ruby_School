@@ -1,6 +1,8 @@
 class EventsController < ApplicationController
-  before_action :set_event, only: [:show, :edit, :update, :destroy, :register]
-
+  before_action :set_event, only: [:show, :edit, :update, :destroy, :register, :register_user]
+  before_action :is_event_full?, only: :register_user
+  before_action :is_valid_email?, only: :register_user
+  before_action :set_user, only: :register_user
 
   # GET /events
   # GET /events.json
@@ -67,19 +69,14 @@ class EventsController < ApplicationController
   end
 
   def register_user
-    error =nil
-    @event = Event.find(params[:id])
-    email = params[:email]
-    user = User.where(email: email).take
-    unless user.nil?
-      @event.users << user
-    else
-      error = "No pudo agregarse el correo #{email}"
-      #puts "#{error}"
+    if @user.nil? || @event.users.include?(@user)
+      redirect_to register_to_event_path(@event), notice: "No pudo agregarse el correo #{params[:email]} al evento"
+      return
     end
 
+    @event.users << user
     respond_to do |format|
-        format.html {redirect_to register_to_event_path(@event), notice: error}
+        format.html {redirect_to register_to_event_path(@event)}
     end
   end
 
@@ -92,5 +89,22 @@ class EventsController < ApplicationController
     # Never trust parameters from the scary internet, only allow the white list through.
     def event_params
       params.require(:event).permit(:name, :start_date, :end_date, :max_students, :description)
+    end
+
+    def set_user
+      email = params[:email]
+      @user = User.where(email: email).take
+    end
+
+    def is_event_full?
+      if @event.is_event_full?
+        redirect_to register_to_event_path(@event), notice: "El evento #{@event.name} esta lleno"
+      end
+    end
+
+    def is_valid_email?
+      if params[:email].blank? || params[:email] !~ User::VALID_EMAIL_REGEX
+        redirect_to register_to_event_path(@event), notice: "Debe especificar un correo valido"
+      end
     end
 end
